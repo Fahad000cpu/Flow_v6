@@ -141,17 +141,16 @@ export function StatusViewer({ user, onClose, onNextUser }: StatusViewerProps) {
       const likeRef = doc(db, "statuses", currentStory.id, "likes", currentUser.uid);
       const statusOwnerRef = doc(db, "users", user.userId);
 
-      // Perform the like updates in a transaction
       await runTransaction(db, async (transaction) => {
         const likeDoc = await transaction.get(likeRef);
-        if(likeDoc.exists()) return; // Already liked, do nothing
+        if(likeDoc.exists()) return;
 
         const statusDoc = await transaction.get(statusRef);
-        if (!statusDoc.exists()) throw "Status does not exist!";
+        if (!statusDoc.exists()) throw new Error("Status does not exist!");
         
         const ownerDoc = await transaction.get(statusOwnerRef);
-        if (!ownerDoc.exists()) throw "Status owner does not exist!";
-
+        if (!ownerDoc.exists()) throw new Error("Status owner does not exist!");
+        
         const currentLikes = statusDoc.data().likes || 0;
         transaction.update(statusRef, { likes: currentLikes + 1 });
         
@@ -161,7 +160,6 @@ export function StatusViewer({ user, onClose, onNextUser }: StatusViewerProps) {
         transaction.set(likeRef, { likedAt: serverTimestamp() });
       });
 
-      // Send notification after the transaction is successful
       const notificationsRef = collection(db, "users", user.userId, "notifications");
       await addDoc(notificationsRef, {
           fromUserId: currentUser.uid,

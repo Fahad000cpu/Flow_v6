@@ -60,6 +60,21 @@ function getYoutubeVideoId(url: string): string | null {
     return (match && match[2] && match[2].length === 11) ? match[2] : null;
 }
 
+const urlRegex = /(https?:\/\/[^\s]+)/g;
+const renderWithLinks = (text: string) => {
+  if (!text) return text;
+  return text.split(urlRegex).map((part, i) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 export default function GroupChatPage({ params }: { params: { id: string } }) {
   const [group, setGroup] = useState<Group | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -373,7 +388,7 @@ export default function GroupChatPage({ params }: { params: { id: string } }) {
                         {youtubeVideoId ? (
                             <YoutubePlayer videoId={youtubeVideoId} />
                         ) : (
-                            message.content && <p className="whitespace-pre-wrap">{message.content}</p>
+                            message.content && <p className="whitespace-pre-wrap">{renderWithLinks(message.content)}</p>
                         )}
 
                         <p className="text-xs text-right mt-1 opacity-70">
