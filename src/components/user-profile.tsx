@@ -50,11 +50,11 @@ const profileFormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
   avatarUrl: z.string().url({ message: "Please enter a valid URL." }).optional(),
   isPrivate: z.boolean().default(false),
-  twitter: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
-  instagram: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
-  github: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
-  youtube: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
-  facebook: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  twitter: z.string().optional(),
+  instagram: z.string().optional(),
+  github: z.string().optional(),
+  youtube: z.string().optional(),
+  facebook: z.string().optional(),
   totalLikes: z.number().optional(),
 });
 
@@ -88,6 +88,10 @@ const XIcon = (props: any) => (
 
 const ProfileInfoRow = ({ icon, label, value, isLink=false }: { icon: React.ReactNode, label: string, value: string | undefined | null, isLink?: boolean }) => {
     if (!value) return null;
+    
+    // Auto-prepend https:// if it's a link and doesn't have a protocol
+    const href = isLink && !/^https?:\/\//i.test(value) ? `https://${value}` : value;
+
     return (
         <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-2 w-24 text-muted-foreground">
@@ -95,7 +99,7 @@ const ProfileInfoRow = ({ icon, label, value, isLink=false }: { icon: React.Reac
                 <span>{label}</span>
             </div>
             {isLink ? (
-                 <a href={value} target="_blank" rel="noopener noreferrer" className="truncate text-primary hover:underline">
+                 <a href={href} target="_blank" rel="noopener noreferrer" className="truncate text-primary hover:underline">
                     {value.replace(/^(https?:\/\/)?(www\.)?/i, '')}
                 </a>
             ) : (
@@ -277,7 +281,6 @@ export function UserProfile({ userId }: { userId: string }) {
     setIsSubmitting(true);
     try {
       const userRef = doc(db, "users", userId);
-      // We don't want to save avatarUrl from this form, it's handled separately.
       const { avatarUrl, ...otherData } = data;
       await setDoc(userRef, otherData, { merge: true });
 
