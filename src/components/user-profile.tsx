@@ -277,6 +277,7 @@ export function UserProfile({ userId }: { userId: string }) {
     setIsSubmitting(true);
     try {
       const userRef = doc(db, "users", userId);
+      // We don't want to save avatarUrl from this form, it's handled separately.
       const { avatarUrl, ...otherData } = data;
       await setDoc(userRef, otherData, { merge: true });
 
