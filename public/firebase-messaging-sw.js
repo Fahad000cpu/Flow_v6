@@ -27,7 +27,7 @@ onBackgroundMessage(messaging, (payload) => {
   const notificationTitle = payload.notification?.title || 'New Message';
   const notificationOptions = {
     body: payload.notification?.body || 'You have a new message.',
-    icon: '/favicon.ico' 
+    icon: ihttps://i.ibb.co/35K0f2s0/file-000000000abc61f797839df146b53269.png
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
