@@ -99,6 +99,16 @@ export function CreateGroupForm() {
             
             const iconFile = data.groupIcon?.[0];
             if (iconFile) {
+                 if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+                    toast({
+                        variant: "destructive",
+                        title: "Configuration Error",
+                        description: "File upload is not configured. Please contact support.",
+                    });
+                    setLoading(false);
+                    return;
+                }
+
                 const formData = new FormData();
                 formData.append('file', iconFile);
                 formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
