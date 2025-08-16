@@ -31,7 +31,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="hsl(210 20% 98%)" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="hsl(210 20% 10%)" />
       </head>
       <body
         className={cn(
