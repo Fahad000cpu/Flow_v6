@@ -50,7 +50,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       if (user) {
-        setIsAdmin(user.uid === process.env.NEXT_PUBLIC_ADMIN_UID);
+        const adminUid = process.env.NEXT_PUBLIC_ADMIN_UID;
+        const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+        
+        const isUidMatch = adminUid ? user.uid === adminUid : false;
+        const isEmailMatch = adminEmail ? user.email === adminEmail : false;
+
+        setIsAdmin(isUidMatch || isEmailMatch);
       } else {
         setIsAdmin(false);
         setUserData(null);
