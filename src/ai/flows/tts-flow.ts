@@ -8,7 +8,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { generate } from 'genkit/ai';
 import wav from 'wav';
 import { googleAI } from '@genkit-ai/googleai';
 
@@ -43,7 +42,7 @@ async function toWav(pcmData: Buffer): Promise<string> {
 }
 
 export async function textToSpeech(input: TtsInput): Promise<TtsOutput> {
-    const { media } = await generate({
+    const { media } = await ai.generate({
         model: googleAI.model('gemini-2.5-flash-preview-tts'),
         config: {
             responseModalities: ['AUDIO'],

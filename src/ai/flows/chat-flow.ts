@@ -8,11 +8,10 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { generate } from 'genkit/ai';
 
 
 export async function generateChatResponse(message: string): Promise<string> {
-    const { text } = await generate({
+    const { text } = await ai.generate({
         model: 'googleai/gemini-1.5-flash-latest',
         prompt: message,
         history: [
