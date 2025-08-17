@@ -305,6 +305,22 @@ export default function Home() {
                 </FormItem>
                 )}
             />
+             <div className="flex items-center justify-end">
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAiGenerate}
+                    disabled={isGenerating}
+                >
+                    {isGenerating ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />
+                    )}
+                    Generate with AI ✨
+                </Button>
+            </div>
             <FormField
                 control={productForm.control}
                 name="name"
@@ -336,23 +352,7 @@ export default function Home() {
                 name="description"
                 render={({ field }) => (
                 <FormItem>
-                     <div className="flex items-center justify-between">
-                        <FormLabel>Description</FormLabel>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleAiGenerate}
-                            disabled={isGenerating}
-                        >
-                            {isGenerating ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />
-                            )}
-                            Generate ✨
-                        </Button>
-                    </div>
+                    <FormLabel>Description</FormLabel>
                     <FormControl>
                     <Textarea placeholder="Describe the product" {...field} />
                     </FormControl>
