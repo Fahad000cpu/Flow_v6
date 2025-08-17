@@ -3,14 +3,14 @@
 import Link from 'next/link';
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { ArrowLeft, Send, Paperclip, X, Loader2, Youtube, Film, Trash2, MoreVertical, ShieldOff, Shield } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, X, Loader2, Youtube, Film, Trash2, MoreVertical, ShieldOff, Shield, CheckCheck } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
-import { addDoc, collection, query, orderBy, onSnapshot, serverTimestamp, doc, deleteDoc, DocumentData } from "firebase/firestore";
+import { addDoc, collection, query, orderBy, onSnapshot, serverTimestamp, doc, deleteDoc, DocumentData, writeBatch, getDocs, where, updateDoc } from "firebase/firestore";
 import { YoutubePlayer } from './youtube-player';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from './ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
@@ -31,6 +31,7 @@ type Message = {
     timestamp: any;
     mediaUrl?: string;
     mediaType?: 'image' | 'video';
+    isRead: boolean;
 }
 
 function getYoutubeVideoId(url: string): string | null {
@@ -82,9 +83,19 @@ export function ChatInterface({ friend }: { friend: Friend }) {
     const messagesCol = collection(db, "chats", chatId, "messages");
     const q = query(messagesCol, orderBy("timestamp", "asc"));
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
         const msgs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
         setMessages(msgs);
+
+        // Mark messages as read
+        const unreadMessages = querySnapshot.docs.filter(doc => !doc.data().isRead && doc.data().senderId !== user.uid);
+        if (unreadMessages.length > 0) {
+            const batch = writeBatch(db);
+            unreadMessages.forEach(doc => {
+                batch.update(doc.ref, { isRead: true });
+            });
+            await batch.commit();
+        }
     });
 
     return () => unsubscribe();
@@ -118,6 +129,7 @@ export function ChatInterface({ friend }: { friend: Friend }) {
             content: newMessage,
             senderId: user.uid,
             timestamp: serverTimestamp(),
+            isRead: false,
         };
 
         if (attachment) {
@@ -180,6 +192,7 @@ export function ChatInterface({ friend }: { friend: Friend }) {
             content: youtubeLink,
             senderId: user.uid,
             timestamp: serverTimestamp(),
+            isRead: false,
         });
 
         setYoutubeLink("");
@@ -323,16 +336,17 @@ export function ChatInterface({ friend }: { friend: Friend }) {
         <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
           {messages.map((message) => {
               const youtubeVideoId = getYoutubeVideoId(message.content);
+              const isSender = message.senderId === user.uid;
               return (
-                  <div key={message.id} className={cn("flex items-end gap-2 group", message.senderId === user.uid ? "justify-end" : "justify-start")}>
-                      {message.senderId !== user.uid && (
+                  <div key={message.id} className={cn("flex items-end gap-2 group", isSender ? "justify-end" : "justify-start")}>
+                      {!isSender && (
                           <Avatar className="h-8 w-8 border">
                               <AvatarImage src={friend.avatarUrl} alt={friend.name} />
                               <AvatarFallback>{friend.name.charAt(0)}</AvatarFallback>
                           </Avatar>
                       )}
                       
-                      {message.senderId === user.uid && (
+                      {isSender && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -343,7 +357,7 @@ export function ChatInterface({ friend }: { friend: Friend }) {
                           </Button>
                       )}
                       
-                      <div className={cn("max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2", message.senderId === user.uid ? "bg-primary text-primary-foreground" : "bg-muted")}>
+                      <div className={cn("max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-3 py-2", isSender ? "bg-primary text-primary-foreground" : "bg-muted")}>
                           {message.mediaUrl && message.mediaType === 'image' && (
                               <Image src={message.mediaUrl} alt="attached image" width={300} height={300} className="rounded-md mb-2 object-cover" />
                           )}
@@ -357,9 +371,14 @@ export function ChatInterface({ friend }: { friend: Friend }) {
                             message.content && <p className="whitespace-pre-wrap">{renderWithLinks(message.content)}</p>
                           )}
 
-                          <p className="text-xs text-right mt-1 opacity-70">
-                              {message.timestamp?.toDate ? message.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sending...'}
-                          </p>
+                          <div className="flex items-center justify-end gap-1.5 text-xs mt-1 opacity-70">
+                            <span>
+                                {message.timestamp?.toDate ? message.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sending...'}
+                            </span>
+                            {isSender && (
+                                <CheckCheck className={cn("h-4 w-4", message.isRead && "text-blue-400")} />
+                            )}
+                          </div>
                       </div>
                   </div>
               )

@@ -3,14 +3,14 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
-import { X, Heart, Share2, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Heart, Share2, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { UserWithStories } from "./status-list";
 import { YoutubePlayer } from "./youtube-player";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/auth-context";
 import { db } from "@/lib/firebase";
-import { doc, runTransaction, serverTimestamp, collection, addDoc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, runTransaction, serverTimestamp, collection, addDoc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "./ui/button";
 
@@ -32,6 +32,7 @@ export function StatusViewer({ user, onClose, onNextUser }: StatusViewerProps) {
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const [viewCount, setViewCount] = useState(0);
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
   const likeAnimationTimeoutRef = useRef<NodeJS.Timeout>();
   const lastTap = useRef(0);
@@ -41,6 +42,7 @@ export function StatusViewer({ user, onClose, onNextUser }: StatusViewerProps) {
 
   const currentStory = user.stories[currentStoryIndex];
   const youtubeVideoId = currentStory ? getYoutubeVideoId(currentStory.url) : null;
+  const isOwner = currentUser?.uid === user.userId;
   
   const goToNextStory = useCallback(() => {
     if (currentStoryIndex < user.stories.length - 1) {
@@ -57,16 +59,42 @@ export function StatusViewer({ user, onClose, onNextUser }: StatusViewerProps) {
   };
   
   useEffect(() => {
-      const checkLikeStatus = async () => {
+      const processStoryView = async () => {
+          if (!currentUser || !currentStory || isOwner) return;
+          const statusRef = doc(db, "statuses", currentStory.id);
+          try {
+              // Atomically update the viewers array
+              await updateDoc(statusRef, {
+                  viewers: arrayUnion(currentUser.uid)
+              });
+          } catch (error) {
+              console.error("Error marking status as viewed:", error);
+          }
+      };
+      
+      const checkLikeAndViewStatus = async () => {
           if (!currentUser || !currentStory) return;
-          const likeRef = doc(db, "statuses", currentStory.id, "likes", currentUser.uid);
-          const likeSnap = await getDoc(likeRef);
-          setIsLiked(likeSnap.exists());
+          const statusRef = doc(db, "statuses", currentStory.id);
+          const statusSnap = await getDoc(statusRef);
+
+          if (statusSnap.exists()) {
+              const statusData = statusSnap.data();
+              // Check like status
+              const likeRef = doc(db, "statuses", currentStory.id, "likes", currentUser.uid);
+              const likeSnap = await getDoc(likeRef);
+              setIsLiked(likeSnap.exists());
+              
+              // Set view count
+              const viewers = statusData.viewers || [];
+              setViewCount(viewers.length);
+          }
       }
+      
       if(currentStory) {
-        checkLikeStatus();
+        processStoryView();
+        checkLikeAndViewStatus();
       }
-  }, [currentStory, currentUser]);
+  }, [currentStory, currentUser, isOwner]);
 
 
   useEffect(() => {
@@ -123,7 +151,7 @@ export function StatusViewer({ user, onClose, onNextUser }: StatusViewerProps) {
       });
       return;
     }
-    if (currentUser.uid === user.userId) {
+    if (isOwner) {
         toast({ title: "Can't like your own status" });
         return;
     }
@@ -352,6 +380,13 @@ export function StatusViewer({ user, onClose, onNextUser }: StatusViewerProps) {
                 <Share2 className="h-7 w-7"/>
             </Button>
         </div>
+
+        {isOwner && (
+            <div className="absolute bottom-5 left-5 flex items-center gap-2 text-white bg-black/30 p-2 rounded-lg z-40">
+                <Eye className="h-5 w-5"/>
+                <span className="font-semibold text-sm">{viewCount}</span>
+            </div>
+        )}
       </div>
     </div>
   );
