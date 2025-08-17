@@ -6,7 +6,6 @@ import { useState, useEffect } from 'react'
 import { Header } from "@/components/header";
 import { Toaster } from "@/components/ui/toaster";
 import { BottomNav } from "@/components/bottom-nav";
-import { PermissionsDialog } from "@/components/permissions-dialog";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/context/auth-context";
 import { FirebaseMessagingProvider } from "@/context/firebase-messaging-context";
@@ -79,7 +78,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                   </div>
                 </div>
                 <Toaster />
-                <PermissionsDialog />
               </PageTransitionHandler>
             </FirebaseMessagingProvider>
           </AuthProvider>

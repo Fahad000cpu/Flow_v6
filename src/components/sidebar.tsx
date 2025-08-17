@@ -3,16 +3,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, UserCircle, MessageSquare, Shield, Camera, Link2, FileText, Share2, Copy, Star, Users, Sparkles, LogIn, LogOut } from "lucide-react";
+import { Home, UserCircle, MessageSquare, Shield, Camera, Link2, FileText, Share2, Copy, Star, Users, Sparkles, LogIn, LogOut, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 export function Sidebar() {
   const pathname = usePathname();
   const { toast } = useToast();
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, userData, signOut, isAdmin } = useAuth();
   
   const navLinks = [
     { href: "/", label: "Home", icon: Home },
@@ -115,6 +116,33 @@ export function Sidebar() {
           })}
         </ul>
       </nav>
+
+       {user && (
+         <div className="p-2 border-t">
+            {!userData?.notificationToken && (
+               <Button variant="ghost" className="w-full justify-start text-primary" asChild>
+                <Link href="/notifications/enable">
+                  <Bell className="mr-2 h-4 w-4" />
+                  Enable Notifications
+                </Link>
+              </Button>
+            )}
+            <div className="flex items-center gap-2 p-2">
+                <Avatar className="h-9 w-9">
+                    <AvatarImage src={userData?.avatarUrl} alt={userData?.name} />
+                    <AvatarFallback>{userData?.name?.[0]}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 overflow-hidden">
+                    <p className="font-semibold truncate">{userData?.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                </div>
+                 <Button variant="ghost" size="icon" onClick={signOut}>
+                    <LogOut className="h-4 w-4" />
+                 </Button>
+            </div>
+         </div>
+       )}
+
       <div className="mt-auto p-4 border-t">
          {user ? (
             <Button variant="ghost" className="w-full justify-start" onClick={signOut}>
