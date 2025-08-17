@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { ArrowLeft, Send, Paperclip, X, Loader2, Youtube, Film, Trash2, MoreVertical, ShieldOff, Shield, CheckCheck } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, X, Loader2, Youtube, Film, Trash2, MoreVertical, ShieldOff, Shield, CheckCheck, Mic, Trash } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,7 @@ type Message = {
     senderId: string;
     timestamp: any;
     mediaUrl?: string;
-    mediaType?: 'image' | 'video';
+    mediaType?: 'image' | 'video' | 'audio';
     isRead: boolean;
 }
 
@@ -39,7 +39,7 @@ function getYoutubeVideoId(url: string): string | null {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*).*/;
     const match = url.match(regExp);
-    return (match && match[2] && match[2].length === 11) ? match[2] : null;
+    return (match && match[2].length === 11) ? match[2] : null;
 }
 
 const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -69,6 +69,11 @@ export function ChatInterface({ friend }: { friend: Friend }) {
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingTimerRef = useRef<NodeJS.Timeout>();
+
   const { toast } = useToast();
 
   const isBlockedByYou = userData?.blockedUsers?.includes(friend.id);
@@ -107,9 +112,15 @@ export function ChatInterface({ friend }: { friend: Friend }) {
   }, [messages]);
 
 
-  const handleSendMessage = async (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent | { audioBlob: Blob }) => {
     e?.preventDefault();
-    if (!user || !userData || (newMessage.trim() === "" && !attachment)) return;
+    
+    let isAudioMessage = false;
+    if (e && 'audioBlob' in e) {
+        isAudioMessage = true;
+    }
+
+    if (!user || !userData || (newMessage.trim() === "" && !attachment && !isAudioMessage)) return;
     if (isBlockedByYou) {
         toast({ variant: "destructive", title: "User is blocked.", description: "You must unblock this user to send a message." });
         return;
@@ -134,7 +145,23 @@ export function ChatInterface({ friend }: { friend: Friend }) {
             isRead: false,
         };
 
-        if (attachment) {
+        if (isAudioMessage) {
+            const audioBlob = (e as { audioBlob: Blob }).audioBlob;
+            const audioFile = new File([audioBlob], 'voice-message.webm', { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append('file', audioFile);
+            formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+            const uploadResponse = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, { // Audio is treated as video/raw by cloudinary
+                method: 'POST',
+                body: formData,
+            });
+            if (!uploadResponse.ok) throw new Error('Audio upload failed');
+            const cloudinaryData = await uploadResponse.json();
+            messageData.mediaUrl = cloudinaryData.secure_url;
+            messageData.mediaType = 'audio';
+            sentMessageContent = 'Sent a voice message';
+        } else if (attachment) {
             const formData = new FormData();
             formData.append('file', attachment.file);
             formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
@@ -305,6 +332,48 @@ export function ChatInterface({ friend }: { friend: Friend }) {
     }
   }
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      const audioChunks: BlobPart[] = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        handleSendMessage({ audioBlob });
+        stream.getTracks().forEach(track => track.stop()); // Stop the microphone
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast({ variant: "destructive", title: "Recording Failed", description: "Could not access microphone." });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   if (!user) {
     // Or a loading spinner
     return <div className="flex items-center justify-center h-full">Please log in to chat.</div>
@@ -380,6 +449,9 @@ export function ChatInterface({ friend }: { friend: Friend }) {
                           {message.mediaUrl && message.mediaType === 'video' && (
                               <video src={message.mediaUrl} controls className="rounded-md mb-2 w-full max-w-[300px]" />
                           )}
+                          {message.mediaUrl && message.mediaType === 'audio' && (
+                                <audio src={message.mediaUrl} controls className="w-full max-w-[250px]" />
+                          )}
 
                           {youtubeVideoId ? (
                               <YoutubePlayer videoId={youtubeVideoId} />
@@ -419,34 +491,57 @@ export function ChatInterface({ friend }: { friend: Friend }) {
                   </Button>
               </div>
           )}
-          <form onSubmit={handleSendMessage} className="flex items-center gap-2 p-2">
-            <Button variant="ghost" size="icon" type="button" onClick={() => handleAttachmentClick('image')} disabled={isSending || isBlockedByYou}>
-                <Paperclip />
-                <span className="sr-only">Attach image</span>
+          <div className="flex items-center gap-2 p-2">
+             {isRecording ? (
+                <div className="flex-1 flex items-center gap-2 bg-muted p-2 rounded-lg">
+                    <div className="bg-red-500 h-2.5 w-2.5 rounded-full animate-pulse"></div>
+                    <p className="font-mono text-sm">{formatTime(recordingTime)}</p>
+                </div>
+            ) : (
+            <>
+                <Button variant="ghost" size="icon" type="button" onClick={() => handleAttachmentClick('image')} disabled={isSending || isBlockedByYou}>
+                    <Paperclip />
+                    <span className="sr-only">Attach image</span>
+                </Button>
+                <Button variant="ghost" size="icon" type="button" onClick={() => handleAttachmentClick('video')} disabled={isSending || isBlockedByYou}>
+                    <Film />
+                    <span className="sr-only">Attach video</span>
+                </Button>
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                <Button variant="ghost" size="icon" type="button" onClick={() => setIsYoutubeDialogOpen(true)} disabled={isSending || isBlockedByYou}>
+                    <Youtube />
+                    <span className="sr-only">Share YouTube video</span>
+                </Button>
+                <form onSubmit={handleSendMessage} className="flex-1 flex items-center gap-2">
+                    <Input
+                        type="text"
+                        placeholder="Type a message..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        className="flex-1"
+                        autoComplete="off"
+                        disabled={isSending || isBlockedByYou}
+                        />
+                    <Button type="submit" size="icon" disabled={isSending || (newMessage.trim() === "" && !attachment) || isBlockedByYou}>
+                        {isSending ? <Loader2 className="animate-spin" /> : <Send />}
+                        <span className="sr-only">Send Message</span>
+                    </Button>
+                </form>
+            </>
+            )}
+            <Button
+              size="icon"
+              onMouseDown={startRecording}
+              onMouseUp={stopRecording}
+              onTouchStart={startRecording}
+              onTouchEnd={stopRecording}
+              variant={isRecording ? "destructive" : "ghost"}
+              disabled={isBlockedByYou}
+            >
+              <Mic />
+              <span className="sr-only">Record voice message</span>
             </Button>
-            <Button variant="ghost" size="icon" type="button" onClick={() => handleAttachmentClick('video')} disabled={isSending || isBlockedByYou}>
-                <Film />
-                <span className="sr-only">Attach video</span>
-            </Button>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-            <Button variant="ghost" size="icon" type="button" onClick={() => setIsYoutubeDialogOpen(true)} disabled={isSending || isBlockedByYou}>
-                <Youtube />
-                <span className="sr-only">Share YouTube video</span>
-            </Button>
-            <Input
-              type="text"
-              placeholder="Type a message..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              className="flex-1"
-              autoComplete="off"
-              disabled={isSending || isBlockedByYou}
-            />
-            <Button type="submit" size="icon" disabled={isSending || (newMessage.trim() === "" && !attachment) || isBlockedByYou}>
-              {isSending ? <Loader2 className="mr-2 animate-spin" /> : <Send />}
-              <span className="sr-only">Send Message</span>
-            </Button>
-          </form>
+          </div>
         </footer>
       </div>
 

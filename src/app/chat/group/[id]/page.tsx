@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, DocumentData } from 'firebase/firestore';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, ArrowLeft, Cog, Image as ImageIcon, Loader2, Send, Paperclip, Film, X, Youtube } from 'lucide-react';
+import { Users, ArrowLeft, Cog, Image as ImageIcon, Loader2, Send, Paperclip, Film, X, Youtube, Mic } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth-context';
@@ -50,7 +50,7 @@ type Message = {
     senderAvatar: string;
     timestamp: any;
     mediaUrl?: string;
-    mediaType?: 'image' | 'video';
+    mediaType?: 'image' | 'video' | 'audio';
 }
 
 function getYoutubeVideoId(url: string): string | null {
@@ -85,6 +85,10 @@ export default function GroupChatPage({ params }: { params: { id: string } }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingTimerRef = useRef<NodeJS.Timeout>();
   const { user, userData } = useAuth();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -237,9 +241,15 @@ export default function GroupChatPage({ params }: { params: { id: string } }) {
     }
   }
 
-  const handleSendMessage = async (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent | { audioBlob: Blob }) => {
     e?.preventDefault();
-    if (!user || !userData || !group || (newMessage.trim() === "" && !attachment)) return;
+
+    let isAudioMessage = false;
+    if (e && 'audioBlob' in e) {
+        isAudioMessage = true;
+    }
+    
+    if (!user || !userData || !group || (newMessage.trim() === "" && !attachment && !isAudioMessage)) return;
 
     if (group.settings?.adminOnlyMessages && user.uid !== group.createdBy) {
         toast({ variant: "destructive", title: "Permission Denied", description: "Only admins can send messages in this group." });
@@ -265,7 +275,22 @@ export default function GroupChatPage({ params }: { params: { id: string } }) {
             timestamp: serverTimestamp(),
         };
         
-        if (attachment) {
+         if (isAudioMessage) {
+            const audioBlob = (e as { audioBlob: Blob }).audioBlob;
+            const audioFile = new File([audioBlob], 'voice-message.webm', { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append('file', audioFile);
+            formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+            const uploadResponse = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, {
+                method: 'POST',
+                body: formData,
+            });
+            if (!uploadResponse.ok) throw new Error('Audio upload failed');
+            const cloudinaryData = await uploadResponse.json();
+            messageData.mediaUrl = cloudinaryData.secure_url;
+            messageData.mediaType = 'audio';
+        } else if (attachment) {
             const formData = new FormData();
             formData.append('file', attachment.file);
             formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
@@ -305,6 +330,48 @@ export default function GroupChatPage({ params }: { params: { id: string } }) {
     }
   };
   
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      const audioChunks: BlobPart[] = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        handleSendMessage({ audioBlob });
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast({ variant: "destructive", title: "Recording Failed", description: "Could not access microphone." });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const isAdmin = user && group && user.uid === group.createdBy;
 
   if (loading) {
@@ -384,6 +451,9 @@ export default function GroupChatPage({ params }: { params: { id: string } }) {
                         {message.mediaUrl && message.mediaType === 'video' && (
                             <video src={message.mediaUrl} controls className="rounded-md mb-2 w-full max-w-[300px]" />
                         )}
+                        {message.mediaUrl && message.mediaType === 'audio' && (
+                            <audio src={message.mediaUrl} controls className="w-full max-w-[250px]" />
+                        )}
                         
                         {youtubeVideoId ? (
                             <YoutubePlayer videoId={youtubeVideoId} />
@@ -416,31 +486,54 @@ export default function GroupChatPage({ params }: { params: { id: string } }) {
                   </Button>
               </div>
           )}
-        <form onSubmit={handleSendMessage} className="flex items-center gap-2 p-2">
-            <Button variant="ghost" size="icon" type="button" onClick={() => handleAttachmentClick('image')} disabled={isSending || !canSendMessage}>
-                <ImageIcon />
-                <span className="sr-only">Attach image</span>
-            </Button>
-            <Button variant="ghost" size="icon" type="button" onClick={() => handleAttachmentClick('video')} disabled={isSending || !canSendMessage}>
-                <Film />
-                <span className="sr-only">Attach video</span>
-            </Button>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+        <div className="flex items-center gap-2 p-2">
+            {isRecording ? (
+                 <div className="flex-1 flex items-center gap-2 bg-muted p-2 rounded-lg">
+                    <div className="bg-red-500 h-2.5 w-2.5 rounded-full animate-pulse"></div>
+                    <p className="font-mono text-sm">{formatTime(recordingTime)}</p>
+                </div>
+            ) : (
+                <>
+                <Button variant="ghost" size="icon" type="button" onClick={() => handleAttachmentClick('image')} disabled={isSending || !canSendMessage}>
+                    <ImageIcon />
+                    <span className="sr-only">Attach image</span>
+                </Button>
+                <Button variant="ghost" size="icon" type="button" onClick={() => handleAttachmentClick('video')} disabled={isSending || !canSendMessage}>
+                    <Film />
+                    <span className="sr-only">Attach video</span>
+                </Button>
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
-            <Input
-              type="text"
-              placeholder={canSendMessage ? "Type a message..." : "Only admins can send messages"}
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              className="flex-1"
-              autoComplete="off"
-              disabled={!canSendMessage || isSending}
-            />
-            <Button type="submit" size="icon" disabled={!canSendMessage || isSending || (newMessage.trim() === "" && !attachment)}>
-              {isSending ? <Loader2 className="mr-2 animate-spin" /> : <Send />}
-              <span className="sr-only">Send Message</span>
+                <form onSubmit={handleSendMessage} className="flex-1 flex items-center gap-2">
+                    <Input
+                    type="text"
+                    placeholder={canSendMessage ? "Type a message..." : "Only admins can send messages"}
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    className="flex-1"
+                    autoComplete="off"
+                    disabled={!canSendMessage || isSending}
+                    />
+                    <Button type="submit" size="icon" disabled={!canSendMessage || isSending || (newMessage.trim() === "" && !attachment)}>
+                    {isSending ? <Loader2 className="mr-2 animate-spin" /> : <Send />}
+                    <span className="sr-only">Send Message</span>
+                    </Button>
+                </form>
+                </>
+            )}
+            <Button
+                size="icon"
+                onMouseDown={startRecording}
+                onMouseUp={stopRecording}
+                onTouchStart={startRecording}
+                onTouchEnd={stopRecording}
+                variant={isRecording ? "destructive" : "ghost"}
+                disabled={!canSendMessage || isSending}
+            >
+                <Mic />
+                <span className="sr-only">Record voice message</span>
             </Button>
-          </form>
+          </div>
       </footer>
     </div>
 
