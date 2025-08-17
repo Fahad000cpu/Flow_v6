@@ -87,6 +87,19 @@ export function Notifications() {
     }
   }
 
+  const getLink = (notification: Notification) => {
+    switch (notification.type) {
+        case 'new_message':
+            return `/chat/${notification.entityId}`;
+        case 'like':
+        case 'comment':
+        case 'new_status':
+            return `/status`; // Or a more specific link if available
+        default:
+            return '#';
+    }
+  }
+
   return (
     <DropdownMenu onOpenChange={(isOpen) => {
         if (isOpen) {
@@ -111,7 +124,7 @@ export function Notifications() {
         ) : (
             notifications.map(notif => (
                 <DropdownMenuItem key={notif.id} asChild className="cursor-pointer">
-                    <Link href="#" className="flex items-start gap-3 p-2">
+                    <Link href={getLink(notif)} className="flex items-start gap-3 p-2">
                         <Avatar className="h-8 w-8 mt-1">
                             <AvatarImage src={notif.fromUserAvatar} />
                             <AvatarFallback>{notif.fromUserName?.charAt(0)}</AvatarFallback>

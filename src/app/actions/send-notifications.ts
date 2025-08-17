@@ -40,12 +40,6 @@ export async function sendNotificationsToAll(payload: SendNotificationPayload) {
     console.log(`Successfully sent message to ${response.successCount} devices.`);
     if (response.failureCount > 0) {
       console.log(`Failed to send to ${response.failureCount} devices.`);
-      // You can log the detailed errors for debugging
-      // response.responses.forEach(resp => {
-      //   if (!resp.success) {
-      //     console.error(resp.error);
-      //   }
-      // });
     }
 
     return { success: true, message: `Notification sent to ${response.successCount} of ${tokens.length} devices.` };
@@ -53,4 +47,45 @@ export async function sendNotificationsToAll(payload: SendNotificationPayload) {
     console.error('Error sending push notifications:', error);
     return { success: false, message: 'Failed to send notifications.' };
   }
+}
+
+
+export async function sendNotificationToUser(userId: string, payload: SendNotificationPayload) {
+    try {
+        const userRef = adminDb.doc(`users/${userId}`);
+        const userSnap = await userRef.get();
+
+        if (!userSnap.exists) {
+            return { success: false, message: "User not found." };
+        }
+
+        const userData = userSnap.data();
+        const token = userData?.notificationToken;
+
+        if (!token) {
+            return { success: false, message: "User does not have a notification token." };
+        }
+
+        const message = {
+            notification: {
+                title: payload.title,
+                body: payload.message,
+            },
+            token: token,
+        };
+
+        const response = await adminMessaging.send(message);
+        console.log("Successfully sent message:", response);
+        return { success: true, message: "Notification sent successfully." };
+
+    } catch (error: any) {
+        console.error(`Error sending notification to user ${userId}:`, error);
+        // Check for specific error codes if needed, e.g., 'messaging/registration-token-not-registered'
+        if (error.code === 'messaging/registration-token-not-registered') {
+            // The token is invalid, so we should remove it from the user's document
+            await adminDb.doc(`users/${userId}`).update({ notificationToken: null });
+             return { success: false, message: "User token was invalid and has been removed." };
+        }
+        return { success: false, message: "Failed to send notification." };
+    }
 }

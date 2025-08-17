@@ -17,6 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useAuth } from '@/context/auth-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '@/lib/cloudinary';
+import { sendNotificationToUser } from '@/app/actions/send-notifications';
 
 type Friend = {
   id: string;
@@ -58,7 +59,7 @@ const renderWithLinks = (text: string) => {
 
 
 export function ChatInterface({ friend }: { friend: Friend }) {
-  const { user, loading, blockUser, unblockUser, userData } = useAuth();
+  const { user, userData, loading, blockUser, unblockUser } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [attachment, setAttachment] = useState<{file: File, preview: string, type: 'image' | 'video'} | null>(null);
@@ -108,7 +109,7 @@ export function ChatInterface({ friend }: { friend: Friend }) {
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!user || (newMessage.trim() === "" && !attachment)) return;
+    if (!user || !userData || (newMessage.trim() === "" && !attachment)) return;
     if (isBlockedByYou) {
         toast({ variant: "destructive", title: "User is blocked.", description: "You must unblock this user to send a message." });
         return;
@@ -123,6 +124,7 @@ export function ChatInterface({ friend }: { friend: Friend }) {
     }
 
     setIsSending(true);
+    let sentMessageContent = newMessage;
 
     try {
         const messageData: DocumentData = {
@@ -149,12 +151,21 @@ export function ChatInterface({ friend }: { friend: Friend }) {
             const cloudinaryData = await uploadResponse.json();
             messageData.mediaUrl = cloudinaryData.secure_url;
             messageData.mediaType = attachment.type;
+            if (newMessage.trim() === "") {
+               sentMessageContent = attachment.type === 'image' ? 'Sent an image' : 'Sent a video';
+            }
         }
 
         const chatId = getChatCollectionId(user.uid, friend.id);
         const messagesCol = collection(db, "chats", chatId, "messages");
 
         await addDoc(messagesCol, messageData);
+        
+        // Send notification to the friend
+        await sendNotificationToUser(friend.id, {
+            title: `New message from ${userData.name || 'a user'}`,
+            message: sentMessageContent,
+        });
 
         setNewMessage("");
         setAttachment(null);
@@ -174,7 +185,7 @@ export function ChatInterface({ friend }: { friend: Friend }) {
   };
 
   const handleYoutubeShare = async () => {
-    if (!user || !youtubeLink || !getYoutubeVideoId(youtubeLink)) {
+    if (!user || !userData || !youtubeLink || !getYoutubeVideoId(youtubeLink)) {
         toast({
             variant: "destructive",
             title: "Invalid Link",
@@ -193,6 +204,11 @@ export function ChatInterface({ friend }: { friend: Friend }) {
             senderId: user.uid,
             timestamp: serverTimestamp(),
             isRead: false,
+        });
+        
+         await sendNotificationToUser(friend.id, {
+            title: `New message from ${userData.name || 'a user'}`,
+            message: "Sent a YouTube video",
         });
 
         setYoutubeLink("");
