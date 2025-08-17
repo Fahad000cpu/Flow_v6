@@ -1,34 +1,38 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getMessaging, onBackgroundMessage } from "firebase/messaging/sw";
+// public/firebase-messaging-sw.js
 
-// Your web app's Firebase configuration
+// Scripts for firebase and firebase messaging
+importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
+
+// Initialize the Firebase app in the service worker by passing in the
+// messagingSenderId.
+// This configuration will be automatically replaced by environment variables during the build process
 const firebaseConfig = {
-  apiKey: "AIzaSyAxl3H3DT0DYcQq8CAyMks8RMOq4r2yQTQ",
-  authDomain: "flow-v4.firebaseapp.com",
-  databaseURL: "https://flow-v4-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "flow-v4",
-  storageBucket: "flow-v4.appspot.com",
-  messagingSenderId: "466020342186",
-  appId: "1:466020342186:web:6f719ae63d5817b359f3d3"
+    apiKey: self.FIREBASE_API_KEY,
+    authDomain: self.FIREBASE_AUTH_DOMAIN,
+    projectId: self.FIREBASE_PROJECT_ID,
+    storageBucket: self.FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: self.FIREBASE_MESSAGING_SENDER_ID,
+    appId: self.FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
 
-onBackgroundMessage(messaging, (payload) => {
-  console.log(
-    '[firebase-messaging-sw.js] Received background message ',
-    payload
-  );
-  
+firebase.initializeApp(firebaseConfig);
+
+// Retrieve an instance of Firebase Messaging so that it can handle background
+// messages.
+const messaging = firebase.messaging();
+
+
+messaging.onBackgroundMessage((payload) => {
+  console.log('[firebase-messaging-sw.js] Received background message ', payload);
   // Customize notification here
-  const notificationTitle = payload.notification?.title || 'New Message';
+  const notificationTitle = payload.notification.title;
   const notificationOptions = {
-    body: payload.notification?.body || 'You have a new message.',
-    icon: ihttps://i.ibb.co/35K0f2s0/file-000000000abc61f797839df146b53269.png
+    body: payload.notification.body,
+    icon: payload.notification.image || '/icon-192x192.png'
   };
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  self.registration.showNotification(notificationTitle,
+    notificationOptions);
 });
