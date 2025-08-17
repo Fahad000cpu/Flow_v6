@@ -20,7 +20,6 @@ export function Sidebar() {
     { href: "/", label: "Home", icon: Home },
     { href: "/status", label: "Status", icon: Camera },
     { href: "/chat", label: "Chat", icon: MessageSquare, auth: true },
-    { href: "/ai-chat", label: "AI Chat", icon: Sparkles, auth: true },
     { href: "/chat/create-group", label: "Create Group", icon: Users, auth: true },
     { href: "/profile", label: "Profile", icon: UserCircle, auth: true },
     { href: "/admin", label: "Admin", icon: Shield, adminOnly: true },
