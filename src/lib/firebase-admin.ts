@@ -31,4 +31,5 @@ const initializeFirebaseAdmin = () => {
 
 export const adminApp = initializeFirebaseAdmin();
 export const adminDb = admin.firestore();
-export const adminMessaging = admin.messaging();
+// Do not export adminMessaging directly to avoid it being bundled on the client.
+// Import and use `admin.messaging()` directly in server-side files.

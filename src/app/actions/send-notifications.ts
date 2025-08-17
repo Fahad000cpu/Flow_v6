@@ -1,7 +1,8 @@
 // src/app/actions/send-notifications.ts
 'use server';
 
-import { adminDb, adminMessaging } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
+import { getMessaging } from 'firebase-admin/messaging';
 
 type SendNotificationPayload = {
   title: string;
@@ -36,7 +37,7 @@ export async function sendNotificationsToAll(payload: SendNotificationPayload) {
       tokens: tokens,
     };
 
-    const response = await adminMessaging.sendEachForMulticast(message);
+    const response = await getMessaging().sendEachForMulticast(message);
     console.log(`Successfully sent message to ${response.successCount} devices.`);
     if (response.failureCount > 0) {
       console.log(`Failed to send to ${response.failureCount} devices.`);
@@ -74,7 +75,7 @@ export async function sendNotificationToUser(userId: string, payload: SendNotifi
             token: token,
         };
 
-        const response = await adminMessaging.send(message);
+        const response = await getMessaging().send(message);
         console.log("Successfully sent message:", response);
         return { success: true, message: "Notification sent successfully." };
 

@@ -140,11 +140,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     setLoading(true);
     try {
-        if(user) {
-            // Clear notification token on sign out
-            const userRef = doc(db, "users", user.uid);
-            await setDoc(userRef, { notificationToken: null }, { merge: true });
-        }
         await firebaseSignOut(auth);
         setUser(null);
     } catch (error) {
