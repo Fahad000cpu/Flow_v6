@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, DocumentData } from 'firebase/firestore';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, ArrowLeft, Cog, Image as ImageIcon, Loader2, Send, Paperclip, Film, X, Youtube, Mic } from 'lucide-react';
+import { Users, ArrowLeft, Cog, Image as ImageIcon, Loader2, Send, Paperclip, Film, X, Youtube, Mic, Trash } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth-context';
@@ -57,7 +57,7 @@ function getYoutubeVideoId(url: string): string | null {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*).*/;
     const match = url.match(regExp);
-    return (match && match[2] && match[2].length === 11) ? match[2] : null;
+    return (match && match[2].length === 11) ? match[2] : null;
 }
 
 const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -93,6 +93,7 @@ export default function GroupChatPage({ params }: { params: { id: string } }) {
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const touchMoveRef = useRef({ x: 0, y: 0 });
 
   const form = useForm<SettingsFormValues>();
 
@@ -342,7 +343,9 @@ export default function GroupChatPage({ params }: { params: { id: string } }) {
 
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        handleSendMessage({ audioBlob });
+        if (audioBlob.size > 100) { // Check if there's actual data
+            handleSendMessage({ audioBlob });
+        }
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -358,12 +361,33 @@ export default function GroupChatPage({ params }: { params: { id: string } }) {
     }
   };
 
-  const stopRecording = () => {
+  const stopRecording = (cancel = false) => {
     if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
+      if (!cancel) {
+        mediaRecorderRef.current.stop();
+      } else {
+        // To cancel, we stop the tracks which fires the onstop event with an empty blob
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
       setIsRecording(false);
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     }
+  };
+  
+  const handleTouchMove = (e: React.TouchEvent) => {
+      touchMoveRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLButtonElement>) => {
+      const startX = (e.target as HTMLElement).getBoundingClientRect().left;
+      const endX = touchMoveRef.current.x;
+
+      if (startX - endX > 50) { // Swiped left by 50px
+          stopRecording(true); // Cancel
+          toast({ title: "Recording Canceled" });
+      } else {
+          stopRecording(false); // Send
+      }
   };
 
   const formatTime = (seconds: number) => {
@@ -488,9 +512,12 @@ export default function GroupChatPage({ params }: { params: { id: string } }) {
           )}
         <div className="flex items-center gap-2 p-2">
             {isRecording ? (
-                 <div className="flex-1 flex items-center gap-2 bg-muted p-2 rounded-lg">
-                    <div className="bg-red-500 h-2.5 w-2.5 rounded-full animate-pulse"></div>
-                    <p className="font-mono text-sm">{formatTime(recordingTime)}</p>
+                 <div className="flex-1 flex items-center justify-between bg-muted p-2 rounded-lg">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-red-500 h-2.5 w-2.5 rounded-full animate-pulse"></div>
+                        <p className="font-mono text-sm">{formatTime(recordingTime)}</p>
+                    </div>
+                    <p className='text-sm text-muted-foreground animate-pulse'>&larr; Slide to cancel</p>
                 </div>
             ) : (
                 <>
@@ -515,7 +542,7 @@ export default function GroupChatPage({ params }: { params: { id: string } }) {
                     disabled={!canSendMessage || isSending}
                     />
                     <Button type="submit" size="icon" disabled={!canSendMessage || isSending || (newMessage.trim() === "" && !attachment)}>
-                    {isSending ? <Loader2 className="mr-2 animate-spin" /> : <Send />}
+                    {isSending ? <Loader2 className="animate-spin" /> : <Send />}
                     <span className="sr-only">Send Message</span>
                     </Button>
                 </form>
@@ -524,13 +551,14 @@ export default function GroupChatPage({ params }: { params: { id: string } }) {
             <Button
                 size="icon"
                 onMouseDown={startRecording}
-                onMouseUp={stopRecording}
+                onMouseUp={() => stopRecording(false)}
                 onTouchStart={startRecording}
-                onTouchEnd={stopRecording}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
                 variant={isRecording ? "destructive" : "ghost"}
                 disabled={!canSendMessage || isSending}
             >
-                <Mic />
+                {isRecording ? <Trash /> : <Mic />}
                 <span className="sr-only">Record voice message</span>
             </Button>
           </div>
