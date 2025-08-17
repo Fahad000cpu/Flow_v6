@@ -469,38 +469,52 @@ export function AdminDashboard() {
             <Card>
                 <CardHeader>
                     <CardTitle>User Permissions & Data</CardTitle>
+                    <CardDescription>
+                        View user data and their notification subscription status.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>User</TableHead>
-                                <TableHead>Push Notification Token</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Push Notification Status</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {dataLoading ? (
                                 [...Array(3)].map((_, i) => (
                                     <TableRow key={i}>
-                                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                        <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-32" /></div></TableCell>
                                         <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                                        <TableCell><Skeleton className="h-6 w-32 rounded-full" /></TableCell>
                                     </TableRow>
                                 ))
                             ) : users.length > 0 ? (
                                 users.map(user => (
                                     <TableRow key={user.id}>
-                                        <TableCell className="font-medium">{user.name}</TableCell>
                                         <TableCell>
-                                            <Badge variant={user.notificationToken ? 'default' : 'secondary'} className={user.notificationToken ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : ''}>
-                                                <Bell className="mr-1 h-3 w-3" />
-                                                {user.notificationToken ? `Subscribed (${user.notificationToken.substring(0,20)}...)` : 'Not Subscribed'}
+                                            <div className="flex items-center gap-3">
+                                                <Avatar>
+                                                    <AvatarImage src={user.avatarUrl} alt={user.name} />
+                                                    <AvatarFallback>{user.name?.[0]}</AvatarFallback>
+                                                </Avatar>
+                                                <span className="font-medium">{user.name}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>{user.email}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={user.notificationToken ? 'default' : 'secondary'} className={user.notificationToken ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-200' : ''}>
+                                                <Bell className="mr-2 h-4 w-4" />
+                                                {user.notificationToken ? `Subscribed` : 'Not Subscribed'}
                                             </Badge>
                                         </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={2} className="h-24 text-center">
+                                    <TableCell colSpan={3} className="h-24 text-center">
                                     No users found.
                                     </TableCell>
                                 </TableRow>
@@ -747,3 +761,5 @@ export function AdminDashboard() {
     </Tabs>
   );
 }
+
+    
