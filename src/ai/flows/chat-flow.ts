@@ -14,16 +14,7 @@ export async function generateChatResponse(message: string): Promise<string> {
     const { text } = await ai.generate({
         model: 'googleai/gemini-1.5-flash-latest',
         prompt: message,
-        history: [
-            {
-                role: 'user',
-                content: [{ text: "You are a helpful and friendly AI assistant." }],
-            },
-            {
-                role: 'model',
-                content: [{ text: 'Great! How can I help you today?' }],
-            },
-        ],
+        system: `You are a helpful and friendly AI assistant.`,
     });
     return text;
 }

@@ -41,7 +41,7 @@
     "cloudinary": "^2.5.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
-    "firebase": "^10.12.2",
+    "firebase": "^11.3.0",
     "firebase-admin": "^12.1.1",
     "genkit": "^1.0.0",
     "lucide-react": "^0.475.0",
@@ -60,6 +60,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@opentelemetry/exporter-jaeger": "^1.25.1",
     "@types/node": "^20",
     "@types/nodemailer": "^6.4.15",
     "@types/react": "^18",
