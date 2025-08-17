@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Edit, Trash2, PlusCircle, Search, Loader2, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { generateProductDetails, ProductDetailsInput } from "@/ai/generate-product-details";
+import { generateProductDetails } from "@/ai/generate-product-details";
 
 
 // Mock function to get ads. In a real app, this would come from an ad service.
