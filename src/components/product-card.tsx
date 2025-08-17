@@ -12,6 +12,7 @@ import {
   Mail,
   MoreHorizontal,
   Plus,
+  ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,38 +70,38 @@ export function ProductCard({ product }: { product: Product }) {
 
   return (
     <>
-      <Card className="flex flex-col overflow-hidden rounded-lg shadow-md transition-shadow duration-300 hover:shadow-xl group">
+      <Card className="flex flex-col overflow-hidden rounded-xl shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 group">
         <CardHeader className="relative p-0 overflow-hidden">
           <Image
             src={product.imageUrl}
             alt={product.name}
             width={600}
             height={600}
-            className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-110"
             data-ai-hint={product.dataAiHint}
           />
         </CardHeader>
-        <CardContent className="flex-grow p-4">
-          <CardTitle className="font-headline text-lg font-bold">{product.name}</CardTitle>
+        <CardContent className="flex-grow p-5">
+          <CardTitle className="font-bold text-lg leading-tight">{product.name}</CardTitle>
           <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{product.description}</p>
         </CardContent>
-        <CardFooter className="flex flex-col items-start p-4 pt-0">
+        <CardFooter className="flex flex-col items-start p-5 pt-0">
             <div className="flex w-full items-center justify-between mb-4">
-                 <p className="font-headline text-xl font-semibold">{formattedPrice}</p>
+                 <p className="text-xl font-bold text-foreground">{formattedPrice}</p>
                 <div className="flex items-center gap-1 text-muted-foreground">
                 <button
                     onClick={() => setIsLiked(!isLiked)}
-                    className="flex items-center gap-1.5 p-2 rounded-full transition-colors hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-destructive"
+                    className="flex items-center gap-1.5 p-2 rounded-full transition-colors hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                     aria-label="Like"
                 >
-                    <Heart className={cn("h-5 w-5", isLiked && "fill-destructive text-destructive")} />
+                    <Heart className={cn("h-5 w-5 transition-all", isLiked && "fill-destructive text-destructive")} />
                 </button>
                 <button
                     onClick={() => setIsBookmarked(!isBookmarked)}
-                    className="flex items-center gap-1.5 p-2 rounded-full transition-colors hover:bg-sky-100 dark:hover:bg-sky-900/20 hover:text-sky-600"
+                    className="flex items-center gap-1.5 p-2 rounded-full transition-colors hover:bg-primary/10 text-muted-foreground hover:text-primary"
                     aria-label="Save"
                 >
-                    <Bookmark className={cn("h-5 w-5", isBookmarked && "fill-sky-500 text-sky-500")} />
+                    <Bookmark className={cn("h-5 w-5 transition-all", isBookmarked && "fill-primary text-primary")} />
                 </button>
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -129,7 +130,8 @@ export function ProductCard({ product }: { product: Product }) {
                     </DropdownMenu>
                 </div>
             </div>
-             <Button className="w-full" onClick={handleBuyNow}>
+             <Button className="w-full font-semibold" size="lg" onClick={handleBuyNow}>
+                <ShoppingBag className="mr-2"/>
                 Buy Now
             </Button>
         </CardFooter>

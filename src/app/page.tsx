@@ -176,54 +176,57 @@ export default function Home() {
 
   return (
     <>
-    <div className="py-8">
+    <div className="container mx-auto px-4 py-8">
       
-       <section className="text-center py-12 md:py-20 px-4">
-        <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tight">
-          Find Your Niche.
-        </h1>
-        <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-          Explore a universe of unique products, hand-picked and shared by a community of passionate curators. Your next favorite thing is just a click away.
-        </p>
+       <section className="relative text-center py-20 md:py-32 px-4 rounded-xl overflow-hidden bg-gradient-to-br from-secondary via-background to-accent/30">
+        <div className="absolute inset-0 bg-grid-zinc-300/20 dark:bg-grid-zinc-700/20 [mask-image:linear-gradient(to_bottom,white_20%,transparent_100%)]"></div>
+        <div className="relative z-10">
+            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-accent to-primary">
+            Find Your Niche.
+            </h1>
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+            Explore a universe of unique products, hand-picked and shared by a community of passionate curators. Your next favorite thing is just a click away.
+            </p>
+        </div>
       </section>
         
       {isAdmin && (
-        <div className="mb-6 px-4 flex justify-center">
-            <Button onClick={handleAddNew}>
+        <div className="my-8 flex justify-center">
+            <Button onClick={handleAddNew} size="lg">
                 <PlusCircle className="mr-2 h-4 w-4"/>
                 Add New Product
             </Button>
         </div>
       )}
 
-      <div className="relative mb-6 px-4 max-w-lg mx-auto">
-        <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+      <div className="relative my-8 max-w-lg mx-auto">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         <Input
         placeholder="Search for products by name..."
-        className="pl-10 text-base h-12"
+        className="pl-12 text-base h-12 rounded-full shadow-sm"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         />
        </div>
 
       {loading ? (
-         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 px-4">
-            {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[400px] w-full" />)}
+         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[450px] w-full rounded-xl" />)}
          </div>
       ) : items.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 px-4">
-          {items.map((item) => {
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((item, index) => {
             if (item.type === 'product') {
               const product = item.data as Product;
               return (
-                <div key={product.id} className="relative group">
+                <div key={product.id} className="relative group animate-in fade-in-0 zoom-in-95" style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}>
                   <ProductCard product={product} />
                   {isAdmin && (
-                    <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="icon" variant="outline" className="bg-background/80" onClick={() => handleEdit(product)}>
+                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <Button size="icon" variant="outline" className="bg-background/80 rounded-full h-9 w-9" onClick={() => handleEdit(product)}>
                             <Edit className="h-4 w-4"/>
                         </Button>
-                        <Button size="icon" variant="destructive" onClick={() => handleDelete(product.id)}>
+                        <Button size="icon" variant="destructive" className="rounded-full h-9 w-9" onClick={() => handleDelete(product.id)}>
                             <Trash2 className="h-4 w-4"/>
                         </Button>
                     </div>
