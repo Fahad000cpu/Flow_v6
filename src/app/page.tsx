@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Edit, Trash2, PlusCircle, Search, Loader2, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-// import { generateProductDetails } from "@/ai/generate-product-details";
+import { generateProductDetails } from "@/ai/generate-product-details";
 
 
 // Mock function to get ads. In a real app, this would come from an ad service.
@@ -146,15 +146,15 @@ export default function Home() {
 
         setIsGenerating(true);
         try {
-            // const result = await generateProductDetails({ imageUrl });
-            // productForm.setValue("name", result.name, { shouldValidate: true });
-            // productForm.setValue("price", result.price, { shouldValidate: true });
-            // productForm.setValue("description", result.description, { shouldValidate: true });
-            // productForm.setValue("dataAiHint", result.dataAiHint, { shouldValidate: true });
-            // toast({
-            //     title: "AI Generation Successful!",
-            //     description: "Product details have been filled in.",
-            // });
+            const result = await generateProductDetails({ imageUrl });
+            productForm.setValue("name", result.name, { shouldValidate: true });
+            productForm.setValue("price", result.price, { shouldValidate: true });
+            productForm.setValue("description", result.description, { shouldValidate: true });
+            productForm.setValue("dataAiHint", result.dataAiHint, { shouldValidate: true });
+            toast({
+                title: "AI Generation Successful!",
+                description: "Product details have been filled in.",
+            });
         } catch (error) {
             console.error("AI Generation Error:", error);
             toast({
