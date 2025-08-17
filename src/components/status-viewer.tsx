@@ -18,7 +18,7 @@ function getYoutubeVideoId(url: string): string | null {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*).*/;
     const match = url.match(regExp);
-    return (match && match[2] && match[2].length === 11) ? match[2] : null;
+    return (match && match[2].length === 11) ? match[2] : null;
 }
 
 interface StatusViewerProps {
@@ -165,27 +165,22 @@ export function StatusViewer({ user, onClose, onNextUser }: StatusViewerProps) {
     setIsLiked(true);
 
     try {
-      const statusRef = doc(db, "statuses", currentStory.id);
       const likeRef = doc(db, "statuses", currentStory.id, "likes", currentUser.uid);
       const statusOwnerRef = doc(db, "users", user.userId);
 
       await runTransaction(db, async (transaction) => {
         const likeDoc = await transaction.get(likeRef);
-        if(likeDoc.exists()) return;
+        if(likeDoc.exists()) return; // Already liked, do nothing.
 
-        const statusDoc = await transaction.get(statusRef);
-        if (!statusDoc.exists()) throw new Error("Status does not exist!");
-        
         const ownerDoc = await transaction.get(statusOwnerRef);
         if (!ownerDoc.exists()) throw new Error("Status owner does not exist!");
         
-        const currentLikes = statusDoc.data().likes || 0;
-        transaction.update(statusRef, { likes: currentLikes + 1 });
-        
+        // Increment total likes on the user's profile
         const currentTotalLikes = ownerDoc.data().totalLikes || 0;
         transaction.update(statusOwnerRef, { totalLikes: currentTotalLikes + 1 });
         
-        transaction.set(likeRef, { likedAt: serverTimestamp() });
+        // Add the like document to the status's likes subcollection
+        transaction.set(likeRef, { likedAt: serverTimestamp(), likerName: currentUserData.name });
       });
 
       const notificationsRef = collection(db, "users", user.userId, "notifications");
