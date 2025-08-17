@@ -17,8 +17,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Edit, Trash2, PlusCircle, Search, Loader2 } from "lucide-react";
+import { Edit, Trash2, PlusCircle, Search, Loader2, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { generateProductDetails, ProductDetailsInput } from "@/ai/generate-product-details";
 
 
 // Mock function to get ads. In a real app, this would come from an ad service.
@@ -65,6 +66,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
@@ -130,6 +132,41 @@ export default function Home() {
         });
     }
   }
+
+  const handleAiGenerate = async () => {
+        const imageUrl = productForm.getValues("imageUrl");
+        if (!imageUrl || !z.string().url().safeParse(imageUrl).success) {
+            toast({
+                variant: "destructive",
+                title: "Invalid Image URL",
+                description: "Please enter a valid image URL before generating details.",
+            });
+            return;
+        }
+
+        setIsGenerating(true);
+        try {
+            const result = await generateProductDetails({ imageUrl });
+            productForm.setValue("name", result.name, { shouldValidate: true });
+            productForm.setValue("price", result.price, { shouldValidate: true });
+            productForm.setValue("description", result.description, { shouldValidate: true });
+            productForm.setValue("dataAiHint", result.dataAiHint, { shouldValidate: true });
+            toast({
+                title: "AI Generation Successful!",
+                description: "Product details have been filled in.",
+            });
+        } catch (error) {
+            console.error("AI Generation Error:", error);
+            toast({
+                variant: "destructive",
+                title: "AI Generation Failed",
+                description: "Could not generate product details. Please check the image URL and try again.",
+            });
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
 
   async function onProductSubmit(data: ProductFormValues) {
     setIsSubmitting(true);
@@ -257,6 +294,19 @@ export default function Home() {
             <form onSubmit={productForm.handleSubmit(onProductSubmit)} className="space-y-4">
             <FormField
                 control={productForm.control}
+                name="imageUrl"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Image URL</FormLabel>
+                    <FormControl>
+                    <Input placeholder="https://placehold.co/600x600.png" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={productForm.control}
                 name="name"
                 render={({ field }) => (
                 <FormItem>
@@ -288,22 +338,23 @@ export default function Home() {
                 <FormItem>
                      <div className="flex items-center justify-between">
                         <FormLabel>Description</FormLabel>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleAiGenerate}
+                            disabled={isGenerating}
+                        >
+                            {isGenerating ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />
+                            )}
+                            Generate ✨
+                        </Button>
                     </div>
                     <FormControl>
                     <Textarea placeholder="Describe the product" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={productForm.control}
-                name="imageUrl"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Image URL</FormLabel>
-                    <FormControl>
-                    <Input placeholder="https://placehold.co/600x600.png" {...field} />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
