@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { UserCircle, Menu, MessageSquare, Shield, Camera, Link2, Home, LogOut, LogIn, Bell } from "lucide-react";
+import { UserCircle, Menu, MessageSquare, Shield, Camera, Link2, Home, LogOut, LogIn, Bell, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -19,10 +19,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Notifications } from "./notifications";
+import { useTheme } from "next-themes";
 
 export function Header() {
   const pathname = usePathname();
   const { user, signOut, loading, isAdmin } = useAuth();
+  const { setTheme } = useTheme();
 
   const navLinks = [
     { href: "/", label: "Home", icon: Home },
@@ -99,6 +101,29 @@ export function Header() {
         </nav>
 
         <div className="flex flex-1 items-center justify-end gap-2">
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                    <Palette className="h-5 w-5" />
+                    <span className="sr-only">Change theme</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setTheme("light")}>
+                        Light
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("dark")}>
+                        Dark
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("rainbow")}>
+                        Rainbow
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("system")}>
+                        System
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
           {loading ? (
              <Button variant="ghost" size="icon" className="rounded-full">
                 <UserCircle className="h-6 w-6 animate-pulse" />

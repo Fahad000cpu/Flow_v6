@@ -114,7 +114,6 @@ export function UserProfile({ userId }: { userId: string }) {
   const { toast } = useToast();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const { setTheme } = useTheme()
   const { user, userData: authUserData, blockUser, unblockUser } = useAuth();
   
   const [isUploading, setIsUploading] = useState(false);
@@ -365,27 +364,6 @@ export function UserProfile({ userId }: { userId: string }) {
                       <Edit className="mr-2 h-4 w-4" />
                       Edit Profile
                     </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon">
-                          <Palette className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setTheme("light")}>
-                          Light
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setTheme("dark")}>
-                          Dark
-                        </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => setTheme("rainbow")}>
-                            Rainbow
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setTheme("system")}>
-                          System
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                  </>
               ) : (
                 isBlocked ? (
