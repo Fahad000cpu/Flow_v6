@@ -27,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import type { Product } from "@/types";
 import { ProductCard } from "./product-card";
-import { PlusCircle, Edit, Trash2, Send, Bell, MapPin, Loader2, ExternalLink, Users, Image as ImageIcon } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Send, Bell, MapPin, Loader2, ExternalLink, Users, Image as ImageIcon, Mail } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
@@ -38,6 +38,7 @@ import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, deleteDoc, addDoc, updateDoc } from "firebase/firestore";
 import { Skeleton } from "./ui/skeleton";
 import { sendNotificationsToAll } from "@/app/actions/send-notifications";
+import { sendEmail } from "@/app/actions/send-email";
 import Image from "next/image";
 
 type UserData = {
@@ -92,6 +93,15 @@ const notificationFormSchema = z.object({
 
 type NotificationFormValues = z.infer<typeof notificationFormSchema>;
 
+
+const emailFormSchema = z.object({
+    to: z.string().email("Please enter a valid email address."),
+    subject: z.string().min(3, "Subject must be at least 3 characters."),
+    html: z.string().min(10, "HTML content must be at least 10 characters.")
+})
+
+type EmailFormValues = z.infer<typeof emailFormSchema>;
+
 export function AdminDashboard() {
   const [products, setProducts] = useState<Product[]>([]);
   const [users, setUsers] = useState<UserData[]>([]);
@@ -103,6 +113,7 @@ export function AdminDashboard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const { toast } = useToast();
 
   const productForm = useForm<ProductFormValues>({
@@ -111,6 +122,10 @@ export function AdminDashboard() {
 
   const notificationForm = useForm<NotificationFormValues>({
     resolver: zodResolver(notificationFormSchema)
+  })
+
+  const emailForm = useForm<EmailFormValues>({
+      resolver: zodResolver(emailFormSchema)
   })
 
   useEffect(() => {
@@ -237,6 +252,31 @@ export function AdminDashboard() {
     } finally {
       setIsSending(false);
     }
+  }
+
+  async function onEmailSubmit(data: EmailFormValues) {
+      setIsSendingEmail(true);
+      try {
+          const result = await sendEmail(data);
+          if (result.success) {
+              toast({
+                  title: "Email Sent!",
+                  description: `Email successfully sent to ${data.to}.`,
+              });
+              emailForm.reset({ to: "", subject: "", html: "" });
+          } else {
+              throw new Error(result.error || "An unknown error occurred.");
+          }
+      } catch (error: any) {
+          console.error("Error from email action:", error);
+          toast({
+              title: "Failed to Send Email",
+              description: error.message,
+              variant: "destructive"
+          });
+      } finally {
+          setIsSendingEmail(false);
+      }
   }
 
   const DataExplorer = () => (
@@ -377,11 +417,12 @@ export function AdminDashboard() {
 
   return (
     <Tabs defaultValue="products" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="products">Products</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="locations">Locations</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="email">Email</TabsTrigger>
             <TabsTrigger value="explorer">Data Explorer</TabsTrigger>
         </TabsList>
         <TabsContent value="products">
@@ -550,6 +591,51 @@ export function AdminDashboard() {
                             <Button type="submit" disabled={isSending}>
                                 {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>}
                                 Send to All Subscribed Users
+                            </Button>
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
+        </TabsContent>
+        <TabsContent value="email">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Send Email via SMTP</CardTitle>
+                    <CardDescription>Use this form to send a test email. Ensure your SMTP environment variables are set.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Form {...emailForm}>
+                        <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-6 max-w-lg mx-auto">
+                            <FormField control={emailForm.control} name="to" render={({field}) => (
+                                <FormItem>
+                                    <FormLabel>Recipient Email</FormLabel>
+                                    <FormControl>
+                                        <Input type="email" placeholder="recipient@example.com" {...field}/>
+                                    </FormControl>
+                                    <FormMessage/>
+                                </FormItem>
+                            )}/>
+                             <FormField control={emailForm.control} name="subject" render={({field}) => (
+                                <FormItem>
+                                    <FormLabel>Subject</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Your Email Subject" {...field}/>
+                                    </FormControl>
+                                    <FormMessage/>
+                                </FormItem>
+                            )}/>
+                            <FormField control={emailForm.control} name="html" render={({field}) => (
+                                <FormItem>
+                                    <FormLabel>Email Body (HTML)</FormLabel>
+                                    <FormControl>
+                                        <Textarea placeholder="<h1>Hello World</h1><p>This is a test email.</p>" {...field} rows={6}/>
+                                    </FormControl>
+                                    <FormMessage/>
+                                </FormItem>
+                            )}/>
+                            <Button type="submit" disabled={isSendingEmail}>
+                                {isSendingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Mail className="mr-2 h-4 w-4"/>}
+                                Send Email
                             </Button>
                         </form>
                     </Form>
