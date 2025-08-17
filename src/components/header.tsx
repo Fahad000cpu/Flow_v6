@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Notifications } from "./notifications";
 import { useTheme } from "next-themes";
+import Image from "next/image";
 
 export function Header() {
   const pathname = usePathname();
@@ -54,11 +55,8 @@ export function Header() {
         </div>
 
         <Link href="/" className="mr-6 flex items-center space-x-2">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" className="h-6 w-6">
-            <rect width="256" height="256" fill="none"></rect>
-            <path d="M128,24a104,104,0,1,0,104,104A104.2,104.2,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm48-88a48,48,0,1,1-48-48,48,48,0,0,1,48,48Z" fill="currentColor" className="text-primary-foreground/80"></path>
-          </svg>
-          <span className="font-headline text-lg font-bold">Flow v3</span>
+          <Image src="/icon.svg" alt="AI Flow Logo" width={24} height={24} />
+          <span className="font-headline text-lg font-bold">AI Flow</span>
         </Link>
         
         {/* Desktop Nav */}

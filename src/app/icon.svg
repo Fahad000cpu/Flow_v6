@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8e44ad;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3498db;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="60" ry="60" fill="url(#grad1)"/>
+  <path d="M57.5 73.5C57.5 68.2533 61.7533 64 67 64H88.5C93.7467 64 98 68.2533 98 73.5V90.5H57.5V73.5Z" fill="#f39c12" stroke="#e67e22" stroke-width="2"/>
+  <rect x="57.5" y="90.5" width="40.5" height="11.5" fill="#f39c12"/>
+  <path d="M195 64L210 71.5L195 101L180 71.5L195 64Z" fill="#2ecc71" stroke="#27ae60" stroke-width="2"/>
+  <path d="M70 105C70 99.4772 74.4772 95 80 95H176C181.523 95 186 99.4772 186 105V155C186 160.523 181.523 165 176 165H95L70 185V105Z" fill="white"/>
+  <text x="128" y="145" font-family="Arial, sans-serif" font-size="48" font-weight="bold" text-anchor="middle" fill="#2c3e50">AI</text>
+  <text x="128" y="215" font-family="Arial, sans-serif" font-size="48" font-weight="bold" text-anchor="middle" fill="white">Flow</text>
+  <ellipse cx="65" cy="180" rx="15" ry="5" fill="#f0f" transform="rotate(-30 65 180)"/>
+  <ellipse cx="80" cy="185" rx="15" ry="5" fill="#f0f" transform="rotate(-30 80 185)"/>
+</svg>

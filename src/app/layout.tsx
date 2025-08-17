@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "LinkShare",
+  title: "AI Flow",
   description: "Discover, share, and purchase products curated by your network.",
   manifest: "/manifest.json",
   icons: [{ rel: "icon", url: "/icon-192x192.png" }],
