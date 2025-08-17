@@ -13,7 +13,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { doc, setDoc, onSnapshot, updateDoc, arrayUnion, arrayRemove, DocumentData } from "firebase/firestore";
+import { doc, setDoc, onSnapshot, updateDoc, arrayUnion, arrayRemove, DocumentData, serverTimestamp } from "firebase/firestore";
 
 interface UserData extends DocumentData {
     name?: string;
@@ -25,6 +25,8 @@ interface UserData extends DocumentData {
     blockedBy?: string[];
     permissionsRequested?: boolean;
     totalLikes?: number;
+    createdAt?: any;
+    dateOfBirth?: string;
 }
 
 interface AuthContextType {
@@ -107,6 +109,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         blockedBy: [],
         permissionsRequested: false, // Initialize permission status
         totalLikes: 0, // Initialize total likes
+        createdAt: serverTimestamp(),
+        dateOfBirth: null,
       });
 
       setUser(userCredential.user);

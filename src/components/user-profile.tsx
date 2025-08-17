@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Edit, Mail, Link as LinkIcon, Twitter, Instagram, Github, Palette, Youtube, Facebook, Shield, ShieldOff, UploadCloud, X, Loader2, Star, BadgeCheck, Crown } from "lucide-react";
+import { Edit, Mail, Link as LinkIcon, Twitter, Instagram, Github, Palette, Youtube, Facebook, Shield, ShieldOff, UploadCloud, X, Loader2, Star, BadgeCheck, Crown, CalendarDays, Cake } from "lucide-react";
 import { useTheme } from "next-themes";
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -36,13 +36,17 @@ import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot, Timestamp } from "firebase/firestore";
 import { Skeleton } from "./ui/skeleton";
 import { useAuth } from "@/context/auth-context";
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { Badge } from "./ui/badge";
 import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '@/lib/cloudinary';
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Calendar } from "./ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -56,6 +60,8 @@ const profileFormSchema = z.object({
   youtube: z.string().optional(),
   facebook: z.string().optional(),
   totalLikes: z.number().optional(),
+  createdAt: z.any().optional(),
+  dateOfBirth: z.date().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -142,9 +148,13 @@ export function UserProfile({ userId }: { userId: string }) {
     
     const unsubscribe = onSnapshot(userRef, (docSnap) => {
       if (docSnap.exists()) {
-        const userData = docSnap.data() as ProfileFormValues;
-        setUserInfo(userData);
-        form.reset(userData);
+        const userData = docSnap.data();
+        const formattedData = {
+            ...userData,
+            dateOfBirth: userData.dateOfBirth ? (userData.dateOfBirth as Timestamp).toDate() : undefined,
+        } as ProfileFormValues
+        setUserInfo(formattedData);
+        form.reset(formattedData);
       }
       setLoading(false);
     });
@@ -280,7 +290,7 @@ export function UserProfile({ userId }: { userId: string }) {
     setIsSubmitting(true);
     try {
       const userRef = doc(db, "users", userId);
-      const { avatarUrl, ...otherData } = data;
+      const { avatarUrl, createdAt, ...otherData } = data;
       await setDoc(userRef, otherData, { merge: true });
 
       toast({
@@ -338,6 +348,8 @@ export function UserProfile({ userId }: { userId: string }) {
   const LEGEND_THRESHOLD = 1000;
   const isLegend = (userInfo.totalLikes ?? 0) >= LEGEND_THRESHOLD;
   const progressValue = Math.min(((userInfo.totalLikes ?? 0) / LEGEND_THRESHOLD) * 100, 100);
+
+  const joinedDate = userInfo.createdAt instanceof Timestamp ? userInfo.createdAt.toDate() : null;
 
   return (
     <>
@@ -403,6 +415,8 @@ export function UserProfile({ userId }: { userId: string }) {
                         </CardHeader>
                         <CardContent className="space-y-3">
                             <ProfileInfoRow icon={<Mail className="h-4 w-4"/>} label="Email" value={userInfo.email} />
+                            {joinedDate && <ProfileInfoRow icon={<CalendarDays className="h-4 w-4" />} label="Joined" value={format(joinedDate, 'PPP')} />}
+                            {userInfo.dateOfBirth && <ProfileInfoRow icon={<Cake className="h-4 w-4" />} label="Birthday" value={format(userInfo.dateOfBirth, 'PPP')} />}
                             <ProfileInfoRow icon={<XIcon className="h-4 w-4 fill-current"/>} label="X (Twitter)" value={userInfo.twitter} isLink />
                             <ProfileInfoRow icon={<Instagram className="h-4 w-4"/>} label="Instagram" value={userInfo.instagram} isLink />
                             <ProfileInfoRow icon={<Github className="h-4 w-4"/>} label="GitHub" value={userInfo.github} isLink />
@@ -489,6 +503,48 @@ export function UserProfile({ userId }: { userId: string }) {
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="dateOfBirth"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel>Date of birth</FormLabel>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                        <FormControl>
+                            <Button
+                            variant={"outline"}
+                            className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                            )}
+                            >
+                            {field.value ? (
+                                format(field.value, "PPP")
+                            ) : (
+                                <span>Pick a date</span>
+                            )}
+                            <CalendarDays className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                        </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                            date > new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                        />
+                        </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
               
                <FormItem>
                   <FormLabel>Avatar</FormLabel>
